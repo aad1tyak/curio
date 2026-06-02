@@ -53,11 +53,8 @@ const HomePage = ({ onSearch }) => {
 
   return (
     <div className="bg-[#f6f4f0] flex flex-col items-center justify-center min-h-screen bg-neutral-primary px-4">
-      <div className="mb-8 h-24 overflow-hidden flex items-center justify-center select-none">
-        <img
-          src="../assests/curio_logo.svg"
-          className="h-full w-auto object-contain scale-100 -mt-px -ml-px"
-        />
+      <div className="mb-8 h-full flex items-center justify-center select-none">
+        <img src="../assests/curio_logo.svg" className="h-full w-100" />
       </div>
       <form onSubmit={submitQuery} className="w-full max-w-md mx-auto">
         <div className="relative">
@@ -94,7 +91,10 @@ const HomePage = ({ onSearch }) => {
           </button>
         </div>
       </form>
-      <div className="" onClick={handleSurprize}>
+      <div
+        className="font-monospace border-3 m-4 px-1 py-2 shadow-[5px_5px_0px_#000] hover:bg-[#f0f0f0] active:shadow-[0px_0px_0px_#000] active:translate-x-[5px] active:translate-y-[5px] duration:250 cursor-pointer"
+        onClick={handleSurprize}
+      >
         Surprize Me?
       </div>
     </div>
