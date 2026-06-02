@@ -1,47 +1,80 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 
 function App() {
+  //Search Query function
   const [searchItem, setSearchItem] = useState("");
-  const onSearch = (query) => {};
+  const onSearch = (query) => {
+    console.log(query);
+    setSearchItem(query);
+    setIsReading(true);
+  };
+
+  //Reading state function
+  const [isReading, setIsReading] = useState(() => {
+    const savedState = localStorage.getItem("onReadingPage");
+    return savedState === "true";
+  });
+  useEffect(() => {
+    localStorage.setItem("onReadingPage", isReading);
+  }, [isReading]);
+
+  //Exit reading
+  const exitReading = () => {
+    setIsReading(false);
+  };
+
   return (
     <>
-      <HomePage />
+      {isReading ? (
+        <ReadingPage exit={exitReading} />
+      ) : (
+        <HomePage onSearch={onSearch} />
+      )}
     </>
   );
 }
 
 const HomePage = ({ onSearch }) => {
+  //Functions dealing with input query
   const [query, setQuery] = useState("");
   const handleChange = (e) => {
-    const value = e.target.value;
-    setQuery(value);
-    if (onSearch) onSearch(value);
+    setQuery(e.target.value);
   };
-  const handleClear = () => {
-    setQuery("");
-    if (onSearch) onSearch(value);
+  const submitQuery = (e) => {
+    e.preventDefault();
+    if (onSearch && query.trim()) onSearch(query);
   };
+
+  //Surprize button function
+  const handleSurprize = () => {
+    console.log("Surprize");
+  };
+
   return (
     <div className="">
-      <input
-        type="text"
-        placeholder="Search..."
-        value={query}
-        onChange={handleChange}
-      />
-      {query && (
-        <button onClick={handleChange} aria-label="Submit search">
-          Search
-        </button>
-      )}
-      {query && (
-        <button onClick={handleClear} aria-label="Clear search">
-          X
-        </button>
-      )}
-      <div className="">Surprize Me?</div>
+      <form onSubmit={submitQuery}>
+        <input
+          type="text"
+          placeholder="Search..."
+          value={query}
+          onChange={handleChange}
+        />
+        <button type="submit">Search</button>
+      </form>
+      <div className="" onClick={handleSurprize}>
+        Surprize Me?
+      </div>
     </div>
+  );
+};
+
+const ReadingPage = ({ exit }) => {
+  return (
+    <>
+      <h1>Loading...</h1>
+      <button onClick={exit}> Exit </button>
+    </>
   );
 };
 
