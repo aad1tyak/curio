@@ -1,13 +1,18 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 import "./App.css";
 
 function App() {
   //Search Query function
-  const [searchItem, setSearchItem] = useState("");
+  const [searchItem, setSearchItem] = useState(() => {
+    const savedQuery = localStorage.getItem("readingQuery");
+    return savedQuery || "";
+  });
   const onSearch = (query) => {
     console.log(query);
     setSearchItem(query);
     setIsReading(true);
+    localStorage.setItem("readingQuery", query);
   };
 
   //Reading state function
@@ -21,13 +26,15 @@ function App() {
 
   //Exit reading
   const exitReading = () => {
+    localStorage.setItem("readingQuery", "");
+    setSearchItem("");
     setIsReading(false);
   };
 
   return (
     <>
       {isReading ? (
-        <ReadingPage exit={exitReading} />
+        <ReadingPage topic={searchItem} exit={exitReading} />
       ) : (
         <HomePage onSearch={onSearch} />
       )}
@@ -101,11 +108,150 @@ const HomePage = ({ onSearch }) => {
   );
 };
 
-const ReadingPage = ({ exit }) => {
+const ReadingPage = ({ exit, topic }) => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSimple, setIsSimple] = useState(true);
+  const [articleText, setArticleText] = useState([]);
+  const [articleTitle, setArticleTitle] = useState("");
+
+  const separateStringContent = (rawText) => {
+    if (!rawText) return [];
+
+    // 1. Split by the regex pattern, capturing the "== Title ==" blocks
+    // This matches: == followed by any characters that aren't =, followed by ==
+    const tokens = rawText.split(/(==\s*[^=]+\s*==)/g);
+
+    const resultList = [];
+
+    // We'll track the "current" section we are building
+    let currentTitle = "Introduction"; // Default for text before any headers
+    let currentParagraphs = "";
+    const blackSheepSections = [
+      "Related pages",
+      "References",
+      "Other websites",
+      "Works cited",
+      "Citations",
+      "See also",
+    ];
+
+    tokens.forEach((token) => {
+      // 2. Check if the current token is a header block
+      if (/^==\s*[^=]+\s*==$/.test(token)) {
+        // Save the previous section if it has content
+        if (currentParagraphs.trim()) {
+          if (!blackSheepSections.includes(currentTitle)) {
+            resultList.push({
+              title: currentTitle,
+              content: currentParagraphs.trim(),
+            });
+          }
+        }
+
+        currentTitle = token.replace(/==/g, "").trim();
+        currentParagraphs = ""; // Reset paragraphs for this new section
+      } else {
+        currentParagraphs += token;
+      }
+    });
+
+    // 5. Don't forget to push the final section left in the loop!
+    if (
+      currentParagraphs.trim() &&
+      !blackSheepSections.includes(currentTitle)
+    ) {
+      resultList.push({
+        title: currentTitle,
+        content: currentParagraphs.trim(),
+      });
+    }
+
+    return resultList;
+  };
+  const fetchArticle = async () => {
+    try {
+      setIsLoading(true);
+
+      const endpoint = `https://${isSimple ? "simple" : "en"}.wikipedia.org/w/api.php`;
+      const response = await axios.get(endpoint, {
+        params: {
+          action: "query",
+          format: "json",
+          prop: "extracts",
+          titles: topic,
+          explaintext: 1,
+          exlimit: "max",
+          origin: "*",
+        },
+      });
+      const pages = response.data.query.pages;
+      console.log(pages);
+      const pageId = Object.keys(pages)[0];
+      const txt = pages[pageId].extract;
+      const contentList = separateStringContent(txt);
+      console.log(contentList[0].title);
+      const title = pages[pageId].title;
+      setArticleText(
+        contentList.length > 0
+          ? contentList
+          : [
+              {
+                title: "No Article Found for this topic!",
+                content: "Try Searching for a different term.",
+              },
+            ],
+      );
+      setArticleTitle(title || ``);
+    } catch (err) {
+      console.log(err);
+      setArticleText([{ title: "Failed to retrieve system data." }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (topic) fetchArticle();
+  }, [topic, isSimple]);
+
   return (
     <>
-      <h1>Loading...</h1>
-      <button onClick={exit}> Exit </button>
+      <div className="p-8 font-serif bg-[#f6f4f0] text-neutral-800 min-h-screen">
+        <button
+          onClick={exit}
+          className="mb-6 border border-neutral-400 hover:bg-neutral-200 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors duration-75"
+        >
+          [ ESCAPE ]
+        </button>
+
+        <div className="w-full max-w-3xl">
+          {isLoading ? (
+            <p className="animate-pulse">Loading the terminal stream...</p>
+          ) : (
+            <div className="max-w-3xl">
+              <h1 className="text-2xl font-bold uppercase tracking-tight mb-[1.6rem] border-b border-neutral-400 pb-2">
+                {articleTitle}
+              </h1>
+              <button
+                onClick={() => {
+                  setIsSimple(!isSimple);
+                }}
+                className="mb-6 border border-neutral-400 px-3 py-1.5 font-bold tracking-wide uppercase hover:bg-neutral-200"
+              >
+                {isSimple ? "[ SIMPLE ]" : "[ DETAILED ]"}{" "}
+              </button>
+              {articleText.map((content, index) => (
+                <div key={index} className="mb-6">
+                  <h3 className="font-bold text-lg mb-2">{content.title}</h3>
+                  <pre className="whitespace-pre-wrap leading-[1.9] font-mono text-sm text-neutral-700">
+                    {content.content}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </>
   );
 };
