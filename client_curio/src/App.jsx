@@ -8,6 +8,7 @@ function App() {
     const savedQuery = localStorage.getItem("readingQuery");
     return savedQuery || "";
   });
+
   const onSearch = (query) => {
     console.log(query);
     setSearchItem(query);
@@ -114,104 +115,33 @@ const ReadingPage = ({ exit, topic }) => {
   const [articleText, setArticleText] = useState([]);
   const [articleTitle, setArticleTitle] = useState("");
 
-  const separateStringContent = (rawText) => {
-    if (!rawText) return [];
-
-    // 1. Split by the regex pattern, capturing the "== Title ==" blocks
-    // This matches: == followed by any characters that aren't =, followed by ==
-    const tokens = rawText.split(/(==\s*[^=]+\s*==)/g);
-
-    const resultList = [];
-
-    // We'll track the "current" section we are building
-    let currentTitle = "Introduction"; // Default for text before any headers
-    let currentParagraphs = "";
-    const blackSheepSections = [
-      "Related pages",
-      "References",
-      "Other websites",
-      "Works cited",
-      "Citations",
-      "See also",
-    ];
-
-    tokens.forEach((token) => {
-      // 2. Check if the current token is a header block
-      if (/^==\s*[^=]+\s*==$/.test(token)) {
-        // Save the previous section if it has content
-        if (currentParagraphs.trim()) {
-          if (!blackSheepSections.includes(currentTitle)) {
-            resultList.push({
-              title: currentTitle,
-              content: currentParagraphs.trim(),
-            });
-          }
-        }
-
-        currentTitle = token.replace(/==/g, "").trim();
-        currentParagraphs = ""; // Reset paragraphs for this new section
-      } else {
-        currentParagraphs += token;
-      }
-    });
-
-    // 5. Don't forget to push the final section left in the loop!
-    if (
-      currentParagraphs.trim() &&
-      !blackSheepSections.includes(currentTitle)
-    ) {
-      resultList.push({
-        title: currentTitle,
-        content: currentParagraphs.trim(),
-      });
-    }
-
-    return resultList;
-  };
-  const fetchArticle = async () => {
-    try {
-      setIsLoading(true);
-
-      const endpoint = `https://${isSimple ? "simple" : "en"}.wikipedia.org/w/api.php`;
-      const response = await axios.get(endpoint, {
-        params: {
-          action: "query",
-          format: "json",
-          prop: "extracts",
-          titles: topic,
-          explaintext: 1,
-          exlimit: "max",
-          origin: "*",
-        },
-      });
-      const pages = response.data.query.pages;
-      console.log(pages);
-      const pageId = Object.keys(pages)[0];
-      const txt = pages[pageId].extract;
-      const contentList = separateStringContent(txt);
-      console.log(contentList[0].title);
-      const title = pages[pageId].title;
-      setArticleText(
-        contentList.length > 0
-          ? contentList
-          : [
-              {
-                title: "No Article Found for this topic!",
-                content: "Try Searching for a different term.",
-              },
-            ],
-      );
-      setArticleTitle(title || ``);
-    } catch (err) {
-      console.log(err);
-      setArticleText([{ title: "Failed to retrieve system data." }]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const backend_endpoint = "http://localhost:3000";
 
   useEffect(() => {
-    if (topic) fetchArticle();
+    const fetchArticle = async (topic) => {
+      try {
+        setIsLoading(true);
+
+        const response = await axios.post(`${backend_endpoint}/send/topic`, {
+          topic: topic,
+          subdomain: isSimple ? "simple" : "en",
+        });
+        if (response.data.status === "Success") {
+          setArticleTitle(response.data.content.title);
+          setArticleText(response.data.content.sections);
+        }
+      } catch (err) {
+        console.log(err);
+        setArticleTitle("Concention Fail");
+        setArticleText([
+          { title: "Error", content: "There was a issue with server" },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (topic) fetchArticle(topic);
   }, [topic, isSimple]);
 
   return (
@@ -238,7 +168,7 @@ const ReadingPage = ({ exit, topic }) => {
                 }}
                 className="mb-6 border border-neutral-400 px-3 py-1.5 font-bold tracking-wide uppercase hover:bg-neutral-200"
               >
-                {isSimple ? "[ SIMPLE ]" : "[ DETAILED ]"}{" "}
+                {isSimple ? "[ SHOW DETAILED ]" : "[ SHOW SIMPLE ]"}{" "}
               </button>
               {articleText.map((content, index) => (
                 <div key={index} className="mb-6">
