@@ -10,6 +10,24 @@ const port = 3000;
 
 const parseHtmlArticle = (rawText) => {
   const $ = cheerio.load(rawText);
+  const result
+  $("body")
+    .children()
+    .each((index, element) => {
+      const tagName = element.name;
+      if (tagName == "section") {
+        $(element)
+          .children()
+          .each((subIndex, subElement) => {
+            const subTagName = subElement.name;
+
+            if (subTagName === "h2" || subTagName === "h3") {
+              const headingText = $(subElement).text().trim();
+            }
+            if (subTagName)
+          });
+      }
+    });
 };
 
 const separateStringContent = (rawText) => {
@@ -76,9 +94,20 @@ const fetchArticle = async (topic, subdomain) => {
           "CurioWorkstationApp/1.0 (Contact: aad1tyak; personal development project)",
       },
     });
+
+    const response_html = await axios.get(
+      `https://${subdomain}.wikipedia.org/api/rest_v1/page/html/${topic}`,
+      {
+        headers: {
+          "User-Agent":
+            "CurioWorkstationApp/1.0 (Contact: aad1tyak; personal development project)",
+        },
+      },
+    );
+
+    parseHtmlArticle(response_html.data);
+
     const pages = response.data.query.pages;
-    //console.log(pages);
-    console.log(response.data.query);
     const pageId = Object.keys(pages)[0];
     if (pageId === "-1") {
       return [{ title: "Error", content: "No Article Found for this topic!" }];
