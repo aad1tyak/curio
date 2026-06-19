@@ -132,6 +132,7 @@ app.post("/send/topic", async (req, res) => {
 
   try {
     const contentList = await fetchArticle(topic, subdomain);
+
     res.json({
       status: "Success",
       content: contentList,
@@ -144,6 +145,86 @@ app.post("/send/topic", async (req, res) => {
       err: err,
     });
   }
+});
+
+const fetchAutoComplete = async (q) => {
+  const resultList = [];
+  try {
+    const endpoint = `https://en.wikipedia.org/w/rest.php/v1/search/title?q=${q}&limit=5`;
+    const response = await axios.get(endpoint, {
+      headers: {
+        "User-Agent":
+          "CurioWorkstationApp/1.0 (Contact: aad1tyak; personal development project)",
+      },
+    });
+    if (response.data.pages.length > 0) {
+      response.data.pages.map((page, i) => {
+        resultList.push({ title: page.title, description: page.description });
+      });
+    }
+  } catch (err) {
+    console.log(err);
+  }
+  return resultList;
+};
+
+app.post("/send/recomdList", async (req, res) => {
+  const { query } = req.body;
+  console.log("Recevied: ", query);
+
+  try {
+    const contentList = await fetchAutoComplete(query);
+    res.json({
+      status: "Success",
+      content: contentList,
+      err: "",
+    });
+  } catch (err) {
+    res.json({
+      status: "Failed",
+      content: "",
+      err: err,
+    });
+  }
+});
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const checkWiki = async (topic, subdomain, retries = 3, delayMs = 1000) => {
+  console.log(`Checking ${subdomain} Wikipedia availability for: ${topic}`);
+  try {
+    const endpoint = `https://${subdomain}.wikipedia.org/w/rest.php/v1/page/${encodeURIComponent(topic)}/bare`;
+
+    const response = await axios.get(endpoint, {
+      headers: {
+        "User-Agent":
+          "CurioWorkstationApp/1.0 (Contact: aad1tyak; personal development project)",
+      },
+    });
+    return true;
+  } catch (err) {
+    if (err.response.data?.errorKey === "rest-nonexistent-title") {
+      return false;
+    } else if (err.response.status === 429 && retries > 0) {
+      await delay(delayMs);
+      return checkWiki(topic, subdomain, retries - 1, delay * 2);
+    }
+    return false;
+  }
+};
+
+app.post("/check/isSimpleAvailable", async (req, res) => {
+  const { topic } = req.body;
+
+  if (await checkWiki(topic, "simple")) {
+    return res.json({ available: true });
+  } else {
+    return res.json({ available: false });
+  }
+});
+
+app.get("/db/:title", (req, res) => {
+  addHistory.run(req.params.title);
 });
 
 app.listen(port, () => {
