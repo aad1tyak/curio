@@ -176,8 +176,10 @@ const HomePage = ({ onSearch, openHistory }) => {
 
 const ReadingPage = ({ exit, topic }) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [isSimple, setIsSimple] = useState(true);
+  const [simpleButton, setSimpleButton] = useState(false);
+  const [isSimple, setIsSimple] = useState(false);
   const [articleText, setArticleText] = useState([]);
+  const [articleLength, setArticleLength] = useState(0);
   const [articleTitle, setArticleTitle] = useState("");
 
   const backend_endpoint = "http://localhost:3000";
@@ -187,13 +189,45 @@ const ReadingPage = ({ exit, topic }) => {
       try {
         setIsLoading(true);
 
+        let simpleAvailable = false;
+        const canBeSimple = await axios.post(
+          `${backend_endpoint}/check/isSimpleAvailable`,
+          {
+            topic: topic,
+          },
+        );
+        if (canBeSimple.data.available) {
+          console.log(canBeSimple.data);
+          simpleAvailable = true;
+          setSimpleButton(true);
+        }
+
         const response = await axios.post(`${backend_endpoint}/send/topic`, {
           topic: topic,
-          subdomain: isSimple ? "simple" : "en",
+          subdomain: simpleAvailable ? (isSimple ? "simple" : "en") : "en",
         });
         if (response.data.status === "Success") {
           setArticleTitle(response.data.content.title);
+          setArticleLength(response.data.content.length);
           setArticleText(response.data.content.sections);
+          await axios.get(
+            `${backend_endpoint}/db/${response.data.content.title}`,
+          );
+        } else if (
+          response.data.err.message === "Request failed with status code 429"
+        ) {
+          setArticleTitle("Sorry!");
+          setArticleText([
+            {
+              title: "Too many request",
+              content:
+                "Server is a little busy, Can you please wait for few seconds and search for your query again? Or reload the page in few mins",
+            },
+          ]);
+        } else {
+          setArticleTitle("");
+          setArticleText([{ title: "No Article Found", content: "..." }]);
+          console.log("Error in fetching the article: ", response.data.err);
         }
       } catch (err) {
         console.log(err);
@@ -211,15 +245,14 @@ const ReadingPage = ({ exit, topic }) => {
 
   return (
     <>
-      <div className="p-8 font-serif bg-[#f6f4f0] text-neutral-800 min-h-screen">
-        <button
-          onClick={exit}
-          className="mb-6 border border-neutral-400 hover:bg-neutral-200 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors duration-75"
-        >
-          [ ESCAPE ]
-        </button>
-
-        <div className="w-full max-w-3xl">
+      <div className="flex justify-center p-8 font-serif bg-[#f6f4f0] text-neutral-800 min-h-screen">
+        <div className=" w-full max-w-3xl">
+          <button
+            onClick={exit}
+            className="mb-6 border border-neutral-400 hover:bg-neutral-200 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors duration-75"
+          >
+            [ ESCAPE ]
+          </button>
           {isLoading ? (
             <p className="animate-pulse">Loading the terminal stream...</p>
           ) : (
@@ -227,15 +260,24 @@ const ReadingPage = ({ exit, topic }) => {
               <h1 className="text-2xl font-bold uppercase tracking-tight mb-[1.6rem] border-b border-neutral-400 pb-2">
                 {articleTitle}
               </h1>
-              <button
-                onClick={() => {
-                  setIsSimple(!isSimple);
-                }}
-                className="mb-6 border border-neutral-400 px-3 py-1.5 font-bold tracking-wide uppercase hover:bg-neutral-200"
-              >
-                {isSimple ? "[ SHOW DETAILED ]" : "[ SHOW SIMPLE ]"}{" "}
-              </button>
-              {articleText.map((content, index) => (
+              <p className="text-xl font-medium tracking-tight p-2">
+                Reading Time:{" "}
+                {articleLength != 0
+                  ? Math.floor(articleLength / 1200)
+                  : articleLength}{" "}
+                mins
+              </p>
+              {simpleButton && (
+                <button
+                  onClick={() => {
+                    setIsSimple(!isSimple);
+                  }}
+                  className="mb-6 border border-neutral-400 px-3 py-1.5 font-bold tracking-wide uppercase hover:bg-neutral-200"
+                >
+                  {isSimple ? "[ SHOW DETAILED ]" : "[ SHOW SIMPLE ]"}{" "}
+                </button>
+              )}
+              {articleText?.map((content, index) => (
                 <div key={index} className="mb-6">
                   <h3 className="font-bold text-lg mb-2">{content.title}</h3>
                   <pre className="whitespace-pre-wrap leading-[1.9] font-mono text-sm text-neutral-700">
