@@ -48,6 +48,8 @@ const separateStringContent = (rawText) => {
     "Works cited",
     "Citations",
     "See also",
+    "External Links",
+    "Further Reading",
   ];
 
   tokens.forEach((token) => {
@@ -80,48 +82,64 @@ const separateStringContent = (rawText) => {
 
 const fetchArticle = async (topic, subdomain) => {
   try {
-    const endpoint = `https://${subdomain}.wikipedia.org/w/api.php`;
-    const response = await axios.get(endpoint, {
-      params: {
-        action: "query",
-        format: "json",
-        prop: "extracts",
-        titles: topic,
-        explaintext: 1,
-        exlimit: "max",
-        origin: "*",
-      },
-      headers: {
-        "User-Agent":
-          "CurioWorkstationApp/1.0 (Contact: aad1tyak; personal development project)",
-      },
-    });
-
-    const response_html = await axios.get(
-      `https://${subdomain}.wikipedia.org/api/rest_v1/page/html/${topic}`,
-      {
+    if (await checkWiki(topic, subdomain)) {
+      const endpoint = `https://${subdomain}.wikipedia.org/w/api.php`;
+      const response = await axios.get(endpoint, {
+        params: {
+          action: "query",
+          format: "json",
+          prop: "extracts|info",
+          titles: topic,
+          explaintext: 1,
+          exlimit: "max",
+          origin: "*",
+        },
         headers: {
           "User-Agent":
             "CurioWorkstationApp/1.0 (Contact: aad1tyak; personal development project)",
         },
-      },
-    );
+      });
 
-    parseHtmlArticle(response_html.data);
+      const pages = response.data.query.pages;
+      const pageId = Object.keys(pages)[0];
+      if (pageId === "-1") {
+        return [
+          {
+            title: "Sorry!",
+            section: [
+              {
+                title: "No Article Found for this topic!",
+                content: "...",
+              },
+            ],
+          },
+        ];
+      }
+      const txt = pages[pageId].extract;
+      const subtitle = pages[pageId].title;
+      const contentList = separateStringContent(txt);
+      const length = pages[pageId].length;
 
-    const pages = response.data.query.pages;
-    const pageId = Object.keys(pages)[0];
-    if (pageId === "-1") {
-      return [{ title: "Error", content: "No Article Found for this topic!" }];
+      return {
+        title: subtitle,
+        length: length,
+        sections: contentList,
+      };
+    } else {
+      console.log("Article not found!");
+      return [
+        {
+          title: "Sorry!",
+          length: 0,
+          section: [
+            {
+              title: "No Article Found for this topic!",
+              content: "...",
+            },
+          ],
+        },
+      ];
     }
-    const txt = pages[pageId].extract;
-    const subtitle = pages[pageId].title;
-    const contentList = separateStringContent(txt);
-
-    return {
-      title: subtitle,
-      sections: contentList,
-    };
   } catch (err) {
     console.log(err);
     throw err;
