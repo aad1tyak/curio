@@ -1,34 +1,36 @@
 const express = require("express");
-const cheerio = require("cheerio");
 const axios = require("axios");
 const cors = require("cors");
+const Database = require("better-sqlite3");
 
 const app = express();
 app.use(express.json());
 app.use(cors());
+const db = new Database("curio.db");
 const port = 3000;
 
-const parseHtmlArticle = (rawText) => {
-  const $ = cheerio.load(rawText);
-  const result
-  $("body")
-    .children()
-    .each((index, element) => {
-      const tagName = element.name;
-      if (tagName == "section") {
-        $(element)
-          .children()
-          .each((subIndex, subElement) => {
-            const subTagName = subElement.name;
-
-            if (subTagName === "h2" || subTagName === "h3") {
-              const headingText = $(subElement).text().trim();
-            }
-            if (subTagName)
-          });
-      }
-    });
-};
+db.exec(`
+  CREATE TABLE IF NOT EXISTS history(
+    id  INTEGER PRIMARY KEY,
+    title TEXT NOT NULL UNIQUE,
+    summary TEXT,
+    viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+    `);
+const addHistory = db.prepare(`
+    INSERT INTO history (title, summary)
+    VALUES (?, ?)
+    ON CONFLICT(title) DO UPDATE SET
+      viewed_at = CURRENT_TIMESTAMP;
+  `);
+const getHistory = db.prepare(`
+  SELECT * FROM history
+  ORDER BY viewed_at DESC
+  `);
+const deleteHistory = db.prepare(`
+  DELETE FROM history
+  WHERE id = ?
+  `);
 
 const separateStringContent = (rawText) => {
   if (!rawText) return [];
