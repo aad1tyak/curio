@@ -25,6 +25,11 @@ function App() {
     localStorage.setItem("onReadingPage", isReading);
   }, [isReading]);
 
+  const [history, setHistory] = useState(false);
+  const openHistory = () => {
+    setHistory(true);
+  };
+
   //Exit reading
   const exitReading = () => {
     localStorage.setItem("readingQuery", "");
@@ -37,15 +42,19 @@ function App() {
       {isReading ? (
         <ReadingPage topic={searchItem} exit={exitReading} />
       ) : (
-        <HomePage onSearch={onSearch} />
+        <HomePage onSearch={onSearch} openHistory={openHistory} />
       )}
     </>
   );
 }
 
-const HomePage = ({ onSearch }) => {
+const HomePage = ({ onSearch, openHistory }) => {
   //Functions dealing with input query
   const [query, setQuery] = useState("");
+  const [recomdList, setRecomdList] = useState([]);
+
+  const backend_endpoint = "http://localhost:3000";
+
   const handleChange = (e) => {
     setQuery(e.target.value);
   };
@@ -58,15 +67,50 @@ const HomePage = ({ onSearch }) => {
   const handleSurprize = () => {
     console.log("Surprize");
   };
+  const handleHistory = () => {
+    console.log("History");
+  };
+
+  useEffect(() => {
+    const fetchAutoComplete = async () => {
+      try {
+        const response = await axios.post(
+          `${backend_endpoint}/send/recomdList`,
+          { query: query },
+        );
+
+        if (response.data.status === "Success") {
+          setRecomdList(response.data.content);
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      if (query != "") fetchAutoComplete();
+      else setRecomdList([]);
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [query]);
 
   return (
     <div className="bg-[#f6f4f0] flex flex-col items-center justify-center min-h-screen bg-neutral-primary px-4">
+      <a
+        className="absolute top-0 right-0 m-2 py-1 px-2 text-xl font-light underline font-monospace cursor-pointer"
+        onClick={handleHistory}
+      >
+        History
+      </a>
       <div className="mb-8 h-full flex items-center justify-center select-none">
         <img src="../assests/curio_logo.svg" className="h-full w-100" />
       </div>
       <form onSubmit={submitQuery} className="w-full max-w-md mx-auto">
         <div className="relative">
-          <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
+          <div className="absolute inset-y-0 inset-s-0 flex items-center ps-3 pointer-events-none">
             <svg
               className="w-4 h-4 text-gray-400"
               aria-hidden="true"
@@ -86,17 +130,38 @@ const HomePage = ({ onSearch }) => {
           </div>
           <input
             type="text"
-            className="block w-full p-3 ps-9 bg-white border-1 broder-gray-100 text-black text-sm rounded-none focus:outline-none focus:border-[#f0f0f0] focus:ring-1 focus:ring-gray-500 placeholder:text-gray-400 font-mono"
+            className="block w-full p-3 ps-9 bg-white border  text-black text-sm rounded-none focus:outline-none focus:border-[#f0f0f0] focus:ring-1 focus:ring-gray-500 placeholder:text-gray-400 font-mono"
             placeholder="Search..."
             value={query}
             onChange={handleChange}
           />
           <button
             type="submit"
-            className="absolute end-2 top-1/2 -translate-y-1/2 text-black bg-[#f0f0f0] hover:bg-gray-300 active:bg-gray-300 font-mono text-xs px-4 py-1.5 rounded-none font-semibold tracking-wide uppercase transition-colors"
+            className="absolute inset-e-2 top-1/2 -translate-y-1/2 text-black bg-[#f0f0f0] hover:bg-gray-300 active:bg-gray-300 font-mono text-xs px-4 py-1.5 rounded-none font-semibold tracking-wide uppercase transition-colors"
           >
             Search
           </button>
+          {recomdList.length > 0 && (
+            <div className="absolute left-0 right-0 top-full mt-1 z-50 border border-neutral-300 bg-white shadow-[3px_3px_0px_#000] max-h-48 overflow-y-auto">
+              {recomdList.map(
+                (
+                  item,
+                  i, // 🟢 Fixed: Replaced { } with ( ) for implicit return
+                ) => (
+                  <div
+                    key={i}
+                    onClick={() => onSearch(item.title)} // Make items clickable to trigger search!
+                    className="p-3 border-b border-neutral-100 last:border-0 hover:bg-[#f0f0f0] cursor-pointer text-xs font-mono text-neutral-700 transition-colors"
+                  >
+                    <span className="font-bold text-black">
+                      &gt; {item.title}
+                    </span>
+                    {item.description && ` - ${item.description}`}
+                  </div>
+                ),
+              )}
+            </div>
+          )}
         </div>
       </form>
       <div
