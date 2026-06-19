@@ -10,7 +10,6 @@ function App() {
   });
 
   const onSearch = (query) => {
-    console.log(query);
     setSearchItem(query);
     setIsReading(true);
     localStorage.setItem("readingQuery", query);
@@ -237,6 +236,7 @@ const ReadingPage = ({ exit, topic }) => {
         ]);
       } finally {
         setIsLoading(false);
+        console.log(articleText, articleTitle);
       }
     };
 
