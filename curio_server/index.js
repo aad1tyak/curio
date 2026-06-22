@@ -94,27 +94,25 @@ const fetchArticle = async (topic, subdomain) => {
           exlimit: "max",
           origin: "*",
         },
-        headers: {
-          "User-Agent":
-            "CurioWorkstationApp/1.0 (Contact: aad1tyak; personal development project)",
-        },
       });
 
       const pages = response.data.query.pages;
       const pageId = Object.keys(pages)[0];
+
+      // FIX 1: If page is missing from MediaWiki API
       if (pageId === "-1") {
-        return [
-          {
-            title: "Sorry!",
-            section: [
-              {
-                title: "No Article Found for this topic!",
-                content: "...",
-              },
-            ],
-          },
-        ];
+        return {
+          title: "Not Found",
+          length: 0,
+          sections: [
+            {
+              title: "No Article Found for this topic!",
+              content: "Please try searching for another term.",
+            },
+          ],
+        };
       }
+
       const txt = pages[pageId].extract;
       const subtitle = pages[pageId].title;
       const contentList = separateStringContent(txt);
