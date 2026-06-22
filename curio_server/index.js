@@ -13,15 +13,15 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS history(
     id  INTEGER PRIMARY KEY,
     title TEXT NOT NULL UNIQUE,
-    summary TEXT,
-    viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    length INTEGER,
+    viewed_at DATETIME DEFAULT (datetime('now', 'localtime'))
     )
     `);
 const addHistory = db.prepare(`
-    INSERT INTO history (title, summary)
+    INSERT INTO history (title, length)
     VALUES (?, ?)
     ON CONFLICT(title) DO UPDATE SET
-      viewed_at = CURRENT_TIMESTAMP;
+      viewed_at = datetime('now', 'localtime');
   `);
 const getHistory = db.prepare(`
   SELECT * FROM history
@@ -122,30 +122,29 @@ const fetchArticle = async (topic, subdomain) => {
 
       return {
         title: subtitle,
-        length: length,
+        length: Math.floor(length / 1200),
         sections: contentList,
       };
     } else {
       console.log("Article not found!");
-      return [
-        {
-          title: "Sorry!",
-          length: 0,
-          section: [
-            {
-              title: "No Article Found for this topic!",
-              content: "...",
-            },
-          ],
-        },
-      ];
+
+      // FIX 2: If checkWiki fails
+      return {
+        title: "Not Found",
+        length: 0,
+        sections: [
+          {
+            title: "No Article Found for this topic!",
+            content: "Please try searching for another term.",
+          },
+        ],
+      };
     }
   } catch (err) {
     console.log(err);
     throw err;
   }
 };
-
 app.post("/send/topic", async (req, res) => {
   const { topic, subdomain } = req.body;
   console.log("Recevied: ", topic);
@@ -243,8 +242,16 @@ app.post("/check/isSimpleAvailable", async (req, res) => {
   }
 });
 
-app.get("/db/:title", (req, res) => {
-  addHistory.run(req.params.title);
+app.post("/db/add", async (req, res) => {
+  const { title, length } = req.body;
+  if (title && length) {
+    await addHistory.run(title, length);
+  }
+  res.sendStatus(200);
+});
+
+app.get("/db/get", async (req, res) => {
+  res.json(getHistory.all());
 });
 
 app.listen(port, () => {

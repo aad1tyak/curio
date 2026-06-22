@@ -272,9 +272,12 @@ const ReadingPage = ({ exit, topic }) => {
           setArticleTitle(response.data.content.title);
           setArticleLength(response.data.content.length);
           setArticleText(response.data.content.sections);
-          await axios.get(
-            `${backend_endpoint}/db/${response.data.content.title}`,
-          );
+          if (response.data.content.length !== 0) {
+            await axios.post(`${backend_endpoint}/db/add`, {
+              title: response.data.content.title,
+              length: response.data.content.length,
+            });
+          }
         } else if (
           response.data.err.message === "Request failed with status code 429"
         ) {
@@ -288,6 +291,7 @@ const ReadingPage = ({ exit, topic }) => {
           ]);
         } else {
           setArticleTitle("");
+          setArticleLength(0);
           setArticleText([{ title: "No Article Found", content: "..." }]);
           console.log("Error in fetching the article: ", response.data.err);
         }
@@ -324,11 +328,7 @@ const ReadingPage = ({ exit, topic }) => {
                 {articleTitle}
               </h1>
               <p className="text-xl font-medium tracking-tight p-2">
-                Reading Time:{" "}
-                {articleLength != 0
-                  ? Math.floor(articleLength / 1200)
-                  : articleLength}{" "}
-                mins
+                Reading Time: {articleLength} mins
               </p>
               {simpleButton && (
                 <button
