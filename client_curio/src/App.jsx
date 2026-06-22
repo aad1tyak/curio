@@ -14,42 +14,41 @@ function App() {
     return savedQuery || "";
   });
 
+  const [view, setView] = useState(() => {
+    const savedState = localStorage.getItem("lastVisitedPage");
+    return savedState && "homePage";
+  });
+
   const onSearch = (query) => {
     setSearchItem(query);
-    setIsReading(true);
+    setView("readingPage");
     localStorage.setItem("readingQuery", query);
   };
 
   //Reading state function
-  const [isReading, setIsReading] = useState(() => {
-    const savedState = localStorage.getItem("onReadingPage");
-    return savedState === "true";
-  });
   useEffect(() => {
-    localStorage.setItem("onReadingPage", isReading);
-  }, [isReading]);
+    localStorage.setItem("lastVisitedPage", view);
+  }, [view]);
 
-  const [history, setHistory] = useState(false);
   const openHistory = () => {
-    setHistory(true);
+    setView("history");
   };
 
   //Exit reading
-  const exitReading = () => {
+  const exitToHome = () => {
     localStorage.setItem("readingQuery", "");
     setSearchItem("");
-    setIsReading(false);
+    setView("homePage");
   };
 
-  return (
-    <>
-      {isReading ? (
-        <ReadingPage topic={searchItem} exit={exitReading} />
-      ) : (
-        <HomePage onSearch={onSearch} openHistory={openHistory} />
-      )}
-    </>
-  );
+  if (view === "readingPage") {
+    return <ReadingPage topic={searchItem} exit={exitToHome} />;
+  }
+  if (view === "history") {
+    return <History exit={exitToHome} />;
+  }
+
+  return <HomePage onSearch={onSearch} openHistory={openHistory} />;
 }
 
 const HomePage = ({ onSearch, openHistory }) => {
@@ -70,9 +69,6 @@ const HomePage = ({ onSearch, openHistory }) => {
   //Surprize button function
   const handleSurprize = () => {
     console.log("Surprize");
-  };
-  const handleHistory = () => {
-    console.log("History");
   };
 
   useEffect(() => {
@@ -105,7 +101,7 @@ const HomePage = ({ onSearch, openHistory }) => {
     <div className="bg-[#f6f4f0] flex flex-col items-center justify-center min-h-screen bg-neutral-primary px-4">
       <a
         className="absolute top-0 right-0 m-2 py-1 px-2 text-xl font-light underline font-monospace cursor-pointer"
-        onClick={handleHistory}
+        onClick={openHistory}
       >
         History
       </a>
@@ -175,6 +171,68 @@ const HomePage = ({ onSearch, openHistory }) => {
         Surprize Me?
       </div>
     </div>
+  );
+};
+
+const History = ({ exit }) => {
+  const [historyItems, setHistoryItems] = useState([]);
+  const backend_endpoint = "http://localhost:3000";
+
+  const refresh = () => {
+    console.log("Refresh requestd");
+  };
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const response = await axios.get(`${backend_endpoint}/db/get`);
+        if (response.data) {
+          const itemList = Object.values(response.data);
+          setHistoryItems(itemList);
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    };
+
+    fetchHistory();
+  }, [refresh]);
+
+  return (
+    <>
+      <div className=" w-full max-w-3xl">
+        <button
+          onClick={exit}
+          className="mb-6 border border-neutral-400 hover:bg-neutral-200 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors duration-75"
+        >
+          [ ESCAPE ]
+        </button>
+        <button
+          onClick={refresh}
+          className="mb-6 border border-neutral-400 hover:bg-neutral-200 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors duration-75"
+        >
+          [ REFRESH ]
+        </button>
+        <table className="w-full table-fixed">
+          <thead className="border border-solid">
+            <tr>
+              <td>Last Viewed</td>
+              <td>Title</td>
+              <td>Reading Time</td>
+            </tr>
+          </thead>
+          <tbody>
+            {historyItems.map((item, index) => (
+              <tr key={index}>
+                <td>{dayjs(item.viewed_at).fromNow()}</td>
+                <td>{item.title}</td>
+                <td>{item.length}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 };
 
