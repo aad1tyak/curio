@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
+import dayjs from "dayjs";
 import axios from "axios";
 import "./App.css";
+import relativeTime from "dayjs/plugin/relativeTime";
+
+// Activate the plugin once at the top of your file
+dayjs.extend(relativeTime);
 
 function App() {
   //Search Query function
