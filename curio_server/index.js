@@ -94,8 +94,12 @@ const fetchArticle = async (topic, subdomain) => {
           exlimit: "max",
           origin: "*",
         },
+        headers: {
+          // <--- ADD THIS BACK
+          "User-Agent":
+            "CurioWorkstationApp/1.0 (Contact: aad1tyak; personal development project)",
+        },
       });
-
       const pages = response.data.query.pages;
       const pageId = Object.keys(pages)[0];
 
