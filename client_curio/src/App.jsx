@@ -143,23 +143,18 @@ const HomePage = ({ onSearch, openHistory }) => {
           </button>
           {recomdList.length > 0 && (
             <div className="absolute left-0 right-0 top-full mt-1 z-50 border border-neutral-300 bg-white shadow-[3px_3px_0px_#000] max-h-48 overflow-y-auto">
-              {recomdList.map(
-                (
-                  item,
-                  i, // 🟢 Fixed: Replaced { } with ( ) for implicit return
-                ) => (
-                  <div
-                    key={i}
-                    onClick={() => onSearch(item.title)} // Make items clickable to trigger search!
-                    className="p-3 border-b border-neutral-100 last:border-0 hover:bg-[#f0f0f0] cursor-pointer text-xs font-mono text-neutral-700 transition-colors"
-                  >
-                    <span className="font-bold text-black">
-                      &gt; {item.title}
-                    </span>
-                    {item.description && ` - ${item.description}`}
-                  </div>
-                ),
-              )}
+              {recomdList.map((item, i) => (
+                <div
+                  key={i}
+                  onClick={() => onSearch(item.title)} // Make items clickable to trigger search!
+                  className="p-3 border-b border-neutral-100 last:border-0 hover:bg-[#f0f0f0] cursor-pointer text-xs font-mono text-neutral-700 transition-colors"
+                >
+                  <span className="font-bold text-black">
+                    &gt; {item.title}
+                  </span>
+                  {item.description && ` - ${item.description}`}
+                </div>
+              ))}
             </div>
           )}
         </div>
