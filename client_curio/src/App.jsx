@@ -193,35 +193,64 @@ const History = ({ exit }) => {
     fetchHistory();
   }, [refresh]);
 
+  const deleteItem = async (id) => {
+    console.log(id);
+    try {
+      const result = await axios.post(`${backend_endpoint}/db/delete`, {
+        id: id,
+      });
+      fetchHistory();
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
   return (
     <>
-      <div className=" w-full max-w-3xl">
+      <div className="w-full">
         <button
           onClick={exit}
-          className="mb-6 border border-neutral-400 hover:bg-neutral-200 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors duration-75"
+          className="mb-6 m-2 border border-neutral-400 hover:bg-neutral-200 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors duration-75"
         >
           [ ESCAPE ]
         </button>
         <button
           onClick={refresh}
-          className="mb-6 border border-neutral-400 hover:bg-neutral-200 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors duration-75"
+          className="mb-6 m-2 border border-neutral-400 hover:bg-neutral-200 px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-colors duration-75"
         >
           [ REFRESH ]
         </button>
         <table className="w-full table-fixed">
-          <thead className="border border-solid">
-            <tr>
-              <td>Last Viewed</td>
-              <td>Title</td>
-              <td>Reading Time</td>
+          <thead className="border-b border-t border-solid py-4">
+            <tr className="">
+              <td className="w-1/8 px-1 text-center">Index</td>
+              <td className="w-1/4 px-1 text-center">Last Viewed</td>
+              <td className="w-1/2 px-1 text-center">Title</td>
+              <td className="w-1/4 px-1 text-center">Reading Time</td>
+              <td className="w-1/8 px-1 text-center">Delete</td>
             </tr>
           </thead>
           <tbody>
             {historyItems.map((item, index) => (
               <tr key={index}>
-                <td>{dayjs(item.viewed_at).fromNow()}</td>
-                <td>{item.title}</td>
-                <td>{item.length}</td>
+                <td className="1/8 px-1 text-center">{index + 1}</td>
+                <td className="w-1/4 px-1 text-center">
+                  {dayjs(item.viewed_at).fromNow()}
+                </td>
+                <td className="w-1/2 px-1 text-center truncate">
+                  {item.title}
+                </td>
+                <td className="w-1/4 px-1 text-center">{item.length} mins</td>
+                <td className="w-1/8 px-1 text-center">
+                  <button
+                    className=""
+                    onClick={() => {
+                      deleteItem(item.id);
+                    }}
+                  >
+                    ...
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

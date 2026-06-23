@@ -252,6 +252,18 @@ app.get("/db/get", async (req, res) => {
   res.json(getHistory.all());
 });
 
+app.post("/db/delete", (req, res) => {
+  const { id } = req.body;
+
+  const result = deleteHistory.run(id);
+
+  if (result.changes > 0) {
+    res.json({ status: "Success" });
+  } else {
+    res.json({ status: "Failed" });
+  }
+});
+
 app.listen(port, () => {
   console.log(`Server running!`);
 });
