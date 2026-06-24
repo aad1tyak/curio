@@ -40,6 +40,24 @@ function App() {
     setSearchItem("");
     setView("homePage");
   };
+  const [htmlContent, setHtmlContent] = useState("");
+  const backend_endpoint = "http://localhost:3000";
+  useEffect(() => {
+    const fetchArticle = async () => {
+      try {
+        const response = await axios.get(`${backend_endpoint}/get/html`);
+        setHtmlContent(response.data.output);
+      } catch (Er) {
+        console.log(Er);
+      }
+    };
+    fetchArticle();
+  }, []);
+  return (
+    <div className="w-full font-mono text-sm text-neutral-700">
+      <div className="m-2" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+    </div>
+  );
 
   if (view === "readingPage") {
     return <ReadingPage topic={searchItem} exit={exitToHome} />;
