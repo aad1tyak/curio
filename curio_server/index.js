@@ -83,27 +83,17 @@ const separateStringContent = (rawText) => {
 const fetchArticle = async (topic, subdomain) => {
   try {
     if (await checkWiki(topic, subdomain)) {
-      const endpoint = `https://${subdomain}.wikipedia.org/w/api.php`;
+      const endpoint = `https://${subdomain}.wikipedia.org/w/rest.php/v1/page/${topic}/html`;
       const response = await axios.get(endpoint, {
-        params: {
-          action: "query",
-          format: "json",
-          prop: "extracts|info",
-          titles: topic,
-          explaintext: 1,
-          exlimit: "max",
-          origin: "*",
-        },
         headers: {
-          // <--- ADD THIS BACK
           "User-Agent":
             "CurioWorkstationApp/1.0 (Contact: aad1tyak; personal development project)",
         },
       });
+      console.log(response);
       const pages = response.data.query.pages;
       const pageId = Object.keys(pages)[0];
 
-      // FIX 1: If page is missing from MediaWiki API
       if (pageId === "-1") {
         return {
           title: "Not Found",
@@ -130,7 +120,6 @@ const fetchArticle = async (topic, subdomain) => {
     } else {
       console.log("Article not found!");
 
-      // FIX 2: If checkWiki fails
       return {
         title: "Not Found",
         length: 0,
@@ -147,12 +136,14 @@ const fetchArticle = async (topic, subdomain) => {
     throw err;
   }
 };
+
 app.post("/send/topic", async (req, res) => {
   const { topic, subdomain } = req.body;
   console.log("Recevied: ", topic);
 
   try {
-    const contentList = await fetchArticle(topic, subdomain);
+    const contentList = [];
+    //const contentList = await fetchArticle(topic, subdomain);
 
     res.json({
       status: "Success",
