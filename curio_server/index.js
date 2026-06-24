@@ -268,6 +268,23 @@ app.post("/db/delete", (req, res) => {
   }
 });
 
+const fetchHtml = async (topic, subdomain) => {
+  const endpoint = `https://${subdomain}.wikipedia.org/w/rest.php/v1/page/${topic}/html`;
+  const response = await axios.get(endpoint, {
+    headers: {
+      "User-Agent":
+        "CurioWorkstationApp/1.0 (Contact: aad1tyak; personal development project)",
+    },
+  });
+
+  return response.data;
+};
+
+app.get("/get/html", async (req, res) => {
+  const output = await fetchHtml("jupiter", "simple");
+  res.json({ output: output });
+});
+
 app.listen(port, () => {
   console.log(`Server running!`);
 });
